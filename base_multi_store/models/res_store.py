@@ -3,8 +3,7 @@
 # For copyright and license notices, see __openerp__.py file in module root
 # directory
 ##############################################################################
-from openerp import models, fields, SUPERUSER_ID
-from openerp.osv import osv
+from odoo import models, fields, api
 
 
 class res_store(models.Model):
@@ -44,27 +43,11 @@ class res_store(models.Model):
             'The store name must be unique per company!')
     ]
 
-    _constraints = [
-        (osv.osv._check_recursion,
-         'Error! You can not create recursive stores.', ['parent_id'])
-    ]
-
-    # Copy from res_company
-    def name_search(
-            self, cr, uid, name='', args=None, operator='ilike',
-            context=None, limit=100):
-        context = dict(context or {})
+    @api.model
+    def name_search(self, name, args=None, operator='ilike', limit=100):
+        context = dict(self.env.context or {})
         if context.pop('user_preference', None):
-            # We browse as superuser. Otherwise, the user would be able to
-            # select only the currently visible stores (according to rules,
-            # which are probably to allow to see the child stores) even if
-            # she belongs to some other stores.
-            user = self.pool.get('res.users').browse(
-                cr, SUPERUSER_ID, uid, context=context)
             store_ids = list(set(
-                [user.store_id.id] + [cmp.id for cmp in user.store_ids]))
-            uid = SUPERUSER_ID
+                [self.env.user.store_id.id] + [cmp.id for cmp in self.env.user.store_ids]))
             args = (args or []) + [('id', 'in', store_ids)]
-        return super(res_store, self).name_search(
-            cr, uid, name=name, args=args, operator=operator,
-            context=context, limit=limit)
+        return super(res_store, self).name_search(name=name, args=args, operator=operator, limit=limit)
